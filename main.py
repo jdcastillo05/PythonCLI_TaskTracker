@@ -1,16 +1,24 @@
-# This is a sample Python script.
+import argparse
+import json
+import os
 
-# Press Shift+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
+# Create parser
+parser = argparse.ArgumentParser()
 
+# Defining args we want to collect
+parser.add_argument("action") # Action we wanna do
+parser.add_argument("data") # What we wanna affect
 
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press Ctrl+F8 to toggle the breakpoint.
+# Actually get arguments to parse
+args = parser.parse_args()
 
+path = 'tasklist.json'
+if os.path.exists(path):
+    print(f"'{path}' exists, accessing...")
+else:
+    print(f"'{path}' does not exist, creating...")
 
-# Press the green button in the gutter to run the script.
-if __name__ == '__main__':
-    print_hi('PyCharm')
+# Reading command
+action = args.action
 
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+if action == "add":
