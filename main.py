@@ -22,6 +22,15 @@ update_parser.add_argument("description")
 delete_parser = subparsers.add_parser("delete")
 delete_parser.add_argument("id", type=int)
 
+mip_parser = subparsers.add_parser("mark-in-progress")
+mip_parser.add_argument("id", type=int)
+
+md_parser = subparsers.add_parser("mark-done")
+md_parser.add_argument("id", type=int)
+
+list_parser = subparsers.add_parser("list")
+list_parser.add_argument("status", choices=["done","todo","in-progress"], default=None)
+
 # Collect parsed items and store as namespace
 args = parser.parse_args()
 
@@ -69,7 +78,7 @@ if args.command == "add":
 
 
 
-if args.command == "update":
+elif args.command == "update":
 
     # Check if the JSON tasklist file exists, if not create an empty one
     if os.path.exists(path):
@@ -99,7 +108,7 @@ if args.command == "update":
         print(f"'{path}' does not exist, no tasks to update...")
 
 
-if args.command == "delete":
+elif args.command == "delete":
 
     # Check if the JSON tasklist file exists, if not create an empty one
     if os.path.exists(path):
@@ -114,7 +123,7 @@ if args.command == "delete":
             task_id = args.id
 
             # Go through tasklist and clone every task EXCEPT the one we want to delete
-            filtered_tasklist = [item for item in task_list if item.get('id') != task_id]
+            filtered_tasklist = [task for task in task_list if task.get('id') != task_id]
 
             # Re index
             updated_tasklist = []
@@ -135,5 +144,69 @@ if args.command == "delete":
         with open(path, 'w') as f:
             json.dump(updated_tasklist, f)
             print(f"Task {task_id} has been deleted")
+    else:
+        print(f"'{path}' does not exist, no tasks to delete...")
+
+elif args.command == "mark-in-progress" or args.command == "mark-done":
+
+    # Check if the JSON tasklist file exists, if not create an empty one
+    if os.path.exists(path):
+
+        print(f"'{path}' exists, accessing...")
+
+        # Open the tasklist on read mode
+        with open(path, 'r') as f:
+            # loading the JSON file into an accessible copy variable
+            task_list = json.load(f)
+
+            task_id = args.id
+            # Re index
+            updated_tasklist = []
+            next_id = 0
+            for i, task in enumerate(task_list):
+                # Create a clone but change id
+                clone_task = {
+                    "id": task.get('id'),
+                    "description": task.get('description'),
+                    "status": args.command,
+                    "createdAt": task.get('createdAt'),
+                    "updatedAt": task.get('updatedAt'),
+                }
+                updated_tasklist.append(clone_task)
+                next_id += 1
+
+        # Write changes to JSON file
+        with open(path, 'w') as f:
+            json.dump(updated_tasklist, f)
+            print(f"Task {task_id} status has been changed to {args.command}")
+    else:
+        print(f"'{path}' does not exist, no statuses to adjust...")
+
+elif args.command == "list":
+    # Check if the JSON tasklist file exists, if not create an empty one
+    if os.path.exists(path):
+
+        print(f"'{path}' exists, accessing...")
+
+        # Open the tasklist on read mode
+        with open(path, 'r') as f:
+            # loading the JSON file into an accessible copy variable
+            task_list = json.load(f)
+
+            # Filter by status
+            task_status = args.status
+            # Go through tasklist and clone every task that is of status
+            if task_status is None:
+                filtered_tasklist = task_list
+            else:
+                filtered_tasklist = [task for task in task_list if task.get('status') == task_status]
+            next_id = 0
+            for i, task in enumerate(filtered_tasklist):
+                # Create a clone but change id
+                print(f"id: {task.get('id')}")
+                print(f"description: {task.get('description')}")
+                print(f"status: {task.get('status')}")
+                print(f"createdAt: {task.get('createdAt')}")
+                print(f"updatedAt: {task.get('updatedAt')}\n")
     else:
         print(f"'{path}' does not exist, no tasks to delete...")
