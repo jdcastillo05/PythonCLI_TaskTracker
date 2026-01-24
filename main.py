@@ -3,6 +3,8 @@ import datetime
 import json
 import os
 
+from numpy.matlib import empty
+
 path = 'tasklist.json'
 
 ### BASIC CLI STRUCTURE ####################################
@@ -29,13 +31,15 @@ md_parser = subparsers.add_parser("mark-done")
 md_parser.add_argument("id", type=int)
 
 list_parser = subparsers.add_parser("list")
-list_parser.add_argument("status", choices=["done","todo","in-progress"], default=None)
+list_parser.add_argument("status", choices=["done","todo","in-progress"], nargs='?') # nargs accepts 1 or none args
 
 # Collect parsed items and store as namespace
 args = parser.parse_args()
 
 
-### COMMANDS ################################################
+### COMMANDS ###########################################################################################################
+
+### ADD COMMAND #####################################
 
 if args.command == "add":
 
@@ -78,6 +82,8 @@ if args.command == "add":
 
 
 
+### UPDATE COMMAND ###################################
+
 elif args.command == "update":
 
     # Check if the JSON tasklist file exists, if not create an empty one
@@ -107,6 +113,9 @@ elif args.command == "update":
     else:
         print(f"'{path}' does not exist, no tasks to update...")
 
+
+
+### DELETE COMMAND ###################################
 
 elif args.command == "delete":
 
@@ -147,6 +156,10 @@ elif args.command == "delete":
     else:
         print(f"'{path}' does not exist, no tasks to delete...")
 
+
+
+### STATUS COMMAND ################################
+
 elif args.command == "mark-in-progress" or args.command == "mark-done":
 
     # Check if the JSON tasklist file exists, if not create an empty one
@@ -160,20 +173,25 @@ elif args.command == "mark-in-progress" or args.command == "mark-done":
             task_list = json.load(f)
 
             task_id = args.id
-            # Re index
-            updated_tasklist = []
-            next_id = 0
-            for i, task in enumerate(task_list):
-                # Create a clone but change id
-                clone_task = {
-                    "id": task.get('id'),
-                    "description": task.get('description'),
-                    "status": args.command,
-                    "createdAt": task.get('createdAt'),
-                    "updatedAt": task.get('updatedAt'),
-                }
-                updated_tasklist.append(clone_task)
-                next_id += 1
+            updated_tasklist = task_list
+            # Just slightly more efficient than just having two if statements (O(1) vs 0(N))
+            status_dictionary = {
+                "mark-in-progress": "in-progress",
+                "mark-done": "done",
+            }
+            task_status = status_dictionary.get(args.command)
+            task = updated_tasklist[task_id]
+            # Create a clone but change id
+            clone_task = {
+                "id": task.get('id'),
+                "description": task.get('description'),
+                "status": task_status,
+                "createdAt": task.get('createdAt'),
+                "updatedAt": task.get('updatedAt'),
+            }
+            # Replacing old version/updating status.
+            updated_tasklist.pop(task_id)
+            updated_tasklist.insert(task_id, clone_task)
 
         # Write changes to JSON file
         with open(path, 'w') as f:
@@ -181,6 +199,10 @@ elif args.command == "mark-in-progress" or args.command == "mark-done":
             print(f"Task {task_id} status has been changed to {args.command}")
     else:
         print(f"'{path}' does not exist, no statuses to adjust...")
+
+
+
+### LIST COMMAND ###########################################
 
 elif args.command == "list":
     # Check if the JSON tasklist file exists, if not create an empty one
@@ -200,13 +222,16 @@ elif args.command == "list":
                 filtered_tasklist = task_list
             else:
                 filtered_tasklist = [task for task in task_list if task.get('status') == task_status]
+                if not filtered_tasklist:
+                    print(f"'No tasks found for status: {task_status}")
             next_id = 0
+            # Display all tasks that fit the filter
+            print("") # Line break before first for formatting
             for i, task in enumerate(filtered_tasklist):
-                # Create a clone but change id
                 print(f"id: {task.get('id')}")
                 print(f"description: {task.get('description')}")
                 print(f"status: {task.get('status')}")
                 print(f"createdAt: {task.get('createdAt')}")
                 print(f"updatedAt: {task.get('updatedAt')}\n")
     else:
-        print(f"'{path}' does not exist, no tasks to delete...")
+        print(f"'{path}' does not exist, no tasks to view...")
